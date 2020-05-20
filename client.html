@@ -1,0 +1,111 @@
+<html>
+
+<head>
+  <title>WebSocket Chat Client</title>
+</head>
+
+<body>
+  <h1>WebSocket Chat Client</h1>
+  <p>
+    Host: <input id="webSocketHost" type="text" value="localhost:1234" />
+  </p>
+  <p>
+    <button onClick="initWebSocket();">Connect</button>
+    <button id="disconnectButton" onClick="stopWebSocket();" disabled>Disconnect</button>
+    <button onClick="checkSocket();">State</button>
+  </p>
+  <p>
+    <textarea id="debugTextArea" style="width:400px;height:200px;" readonly></textarea>
+  </p>
+  <p>
+    <input type="text" id="inputText" maxlength="1" placeholder="Variable name" />
+    <button id="subButton" onClick="subVariable();" disabled>Subscribe</button>
+    <button id="unsubButton" onClick="unsubVariable();" disabled>Unsubscribe</button>
+  </p>
+
+  <script type="text/javascript">
+    var debugTextArea = document.getElementById("debugTextArea");
+    function debug(message) {
+      debugTextArea.value += message + "\n";
+      debugTextArea.scrollTop = debugTextArea.scrollHeight;
+    }
+
+    function sendMessage(prefix) {
+      return function() {
+        var msg = prefix + document.getElementById("inputText").value;
+        if (websocket != null) {
+          document.getElementById("inputText").value = "";
+          websocket.send(msg);
+          console.log("string sent :", '"' + msg + '"');
+          debug(msg);
+        }
+      }
+    }
+
+    subVariable = sendMessage('sub ');
+    unsubVariable = sendMessage('unsub ');
+
+    var websocket = null;
+
+    function initWebSocket() {
+      try {
+        if (typeof MozWebSocket == 'function') {
+          WebSocket = MozWebSocket;
+        }
+        if (websocket && websocket.readyState == 1) {
+          websocket.close();
+        }
+        var wsUri = "ws://" + document.getElementById("webSocketHost").value;
+        websocket = new WebSocket(wsUri);
+        websocket.onopen = function (evt) {
+          debug("CONNECTED");
+          document.getElementById("disconnectButton").disabled = false;
+          document.getElementById("subButton").disabled = false;
+          document.getElementById("unsubButton").disabled = false;
+        };
+        websocket.onclose = function (evt) {
+          debug("DISCONNECTED");
+          document.getElementById("disconnectButton").disabled = true;
+          document.getElementById("subButton").disabled = true;
+          document.getElementById("unsubButton").disabled = true;
+        };
+        websocket.onmessage = function (evt) {
+          console.log("Message received :", evt.data);
+          debug(evt.data);
+        };
+        websocket.onerror = function (evt) {
+          debug('ERROR: ' + evt.data);
+        };
+      } catch (exception) {
+        debug('ERROR: ' + exception);
+      }
+    }
+
+    function stopWebSocket() {
+      if (websocket) {
+        websocket.close();
+      }
+    }
+
+    function checkSocket() {
+      if (websocket != null) {
+        debugTextArea.value += "WebSocket state = " + websocket.readyState;
+        if (websocket.readyState === 0) {
+          debug(" ( CONNECTING )");
+        } else if (websocket.readyState === 1) {
+          debug(" ( OPEN )");
+        } else if (websocket.readyState === 2) {
+          debug(" ( CLOSING )");
+        } else if (websocket.readyState === 3) {
+          debug(" ( CLOSED )");
+        } else {
+          debug(" ( UNKNOWN )");
+        }
+      } else {
+        debug("WebSocket is null");
+      }
+    }
+  </script>
+</body>
+
+</html>
